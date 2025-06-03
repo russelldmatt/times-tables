@@ -26,57 +26,73 @@ export const numberWords: Record<string, number> = {
 	sixty: 60,
 	seventy: 70,
 	eighty: 80,
-	ninety: 90
+	ninety: 90,
+	hundred: 100
 };
 
 export function parseSpokenNumber(text: string): number | null {
 	if (!text) return null;
 
+	// Return null if input contains any punctuation
+	if (/[.,\-]/.test(text)) return null;
+
+	// If it's a pure number, parse it
+	if (/^\d+$/.test(text)) {
+		return parseInt(text, 10);
+	}
+
 	// Normalize input text
 	text = text
 		.toLowerCase()
-		.replace(/-/g, ' ') // Convert hyphens to spaces
 		.replace(/\s+/g, ' ') // Normalize multiple spaces
 		.trim();
 
 	// Handle simple numbers (e.g. "eight", "twelve")
 	if (numberWords[text] !== undefined) return numberWords[text];
 
-	// Handle compound numbers like "twenty three" or "twenty-three"
+	// Split into words
 	const parts = text.split(' ');
-	if (parts.length === 2) {
-		const tens = numberWords[parts[0]];
-		const ones = numberWords[parts[1]];
-		if (tens >= 20 && tens <= 90 && ones >= 0 && ones <= 9) {
-			return tens + ones;
+
+	// Handle "hundred" patterns
+	if (parts.includes('hundred')) {
+		const hundredsIndex = parts.indexOf('hundred');
+
+		// Must have a number before "hundred"
+		if (hundredsIndex === 0) return null;
+
+		const hundreds = numberWords[parts[hundredsIndex - 1]];
+		if (hundreds === undefined || hundreds > 9) return null;
+
+		let result = hundreds * 100;
+
+		// If there are more numbers after hundred
+		if (hundredsIndex < parts.length - 1) {
+			// Skip "and" if present
+			const remainingParts = parts.slice(hundredsIndex + 1);
+			if (remainingParts[0] === 'and') remainingParts.shift();
+
+			// Parse the rest as a compound number
+			const remainingText = remainingParts.join(' ');
+			const remainder = parseSpokenNumber(remainingText);
+			if (remainder === null || remainder >= 100) return null;
+
+			result += remainder;
 		}
+
+		return result;
 	}
 
-	// Handle written numbers with "and" like "one hundred and twenty"
-	const withoutAnd = text.replace(/\sand\s/g, ' ');
-	const cleanParts = withoutAnd.split(' ');
-	if (cleanParts.length > 1) {
-		let result = 0;
-		for (const part of cleanParts) {
-			const value = numberWords[part];
-			if (value !== undefined) {
-				result += value;
-			} else {
-				result = 0;
-				break;
+	// Handle compound numbers like "twenty three" or "twenty and three"
+	if (parts.length === 2 || (parts.length === 3 && parts[1] === 'and')) {
+		const first = numberWords[parts[0]];
+		const second = numberWords[parts[parts.length - 1]];
+
+		// Only allow tens (20-90) followed by ones (1-9)
+		if (first !== undefined && second !== undefined) {
+			if (first >= 20 && first <= 90 && second >= 1 && second <= 9) {
+				return first + second;
 			}
 		}
-		if (result > 0) return result;
-	}
-
-	// Try numeric fallback, handling various formats
-	const numericText = text
-		.replace(/[,\s]/g, '') // Remove commas and spaces
-		.match(/^\d+$/); // Ensure only digits remain
-
-	if (numericText) {
-		const numeric = parseInt(numericText[0], 10);
-		if (!isNaN(numeric) && numeric >= 0) return numeric;
 	}
 
 	return null;
