@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Flashcard from '$lib/Flashcard.svelte';
+	import { parseSpokenNumber } from '$lib/parseSpokenNumber';
 
 	const cellResults = $state<Record<string, 'correct' | 'wrong'>>({});
 
@@ -20,56 +21,6 @@
 
 		speechSynthesis.cancel();
 		speechSynthesis.speak(utterance);
-	}
-
-	const numberWords: Record<string, number> = {
-		zero: 0,
-		one: 1,
-		two: 2,
-		three: 3,
-		four: 4,
-		five: 5,
-		six: 6,
-		seven: 7,
-		eight: 8,
-		nine: 9,
-		ten: 10,
-		eleven: 11,
-		twelve: 12,
-		thirteen: 13,
-		fourteen: 14,
-		fifteen: 15,
-		sixteen: 16,
-		seventeen: 17,
-		eighteen: 18,
-		nineteen: 19,
-		twenty: 20,
-		thirty: 30,
-		forty: 40,
-		fifty: 50,
-		sixty: 60,
-		seventy: 70,
-		eighty: 80,
-		ninety: 90
-	};
-
-	function parseSpokenNumber(text: string): number | null {
-		text = text.toLowerCase().replace(/-/g, ' ').trim();
-
-		// Handle simple numbers (e.g. "eight", "twelve")
-		if (numberWords[text] !== undefined) return numberWords[text];
-
-		// Handle compound numbers like "twenty three"
-		const parts = text.split(' ');
-		if (parts.length === 2 && numberWords[parts[0]] >= 20 && numberWords[parts[1]] < 10) {
-			return numberWords[parts[0]] + numberWords[parts[1]];
-		}
-
-		// Try numeric fallback
-		const numeric = parseInt(text, 10);
-		if (!isNaN(numeric)) return numeric;
-
-		return null;
 	}
 
 	function listenForAnswer(expected: number) {
